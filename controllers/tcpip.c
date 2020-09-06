@@ -54,7 +54,7 @@ struct tcpip_controller {
 static int tcpip_connection_create(struct connection *conn)
 {
 	int ret;
-	struct sockaddr_in serv_addr;
+	struct sockaddr_in6 serv_addr;
 	struct tcpip_connection *tconn;
 	struct tcpip_device *td = conn->intf2->priv;
 
@@ -62,7 +62,7 @@ static int tcpip_connection_create(struct connection *conn)
 	if (!tconn)
 		return -ENOMEM;
 
-	tconn->sock = socket(AF_INET, SOCK_STREAM, 0);
+	tconn->sock = socket(AF_INET6, SOCK_STREAM, 0);
 	if (tconn->sock < 0) {
 		pr_err("Can't create socket\n");
 		return tconn->sock;
@@ -70,18 +70,19 @@ static int tcpip_connection_create(struct connection *conn)
 	conn->priv = tconn;
 
 	memset(&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(td->port + conn->cport2_id);
-	serv_addr.sin_addr.s_addr = inet_addr(td->addr);
+	serv_addr.sin6_family = AF_INET6;
+	serv_addr.sin6_port = htons(td->port + conn->cport2_id);
+	inet_pton(AF_INET6, td->addr, &serv_addr.sin6_addr);
 
 	pr_info("Trying to connect to module at %s:%d\n", td->addr, td->port);
 	do {
 		ret = connect(tconn->sock,
 			      (struct sockaddr *)&serv_addr,
-			      sizeof(struct sockaddr));
+			      sizeof(serv_addr));
 		if (ret)
 			sleep(1);
 	} while (ret);
+
 	pr_info("Connected to module\n");
 
 	return 0;
@@ -291,11 +292,59 @@ static int tcpip_write(struct connection *conn, void *data, size_t len)
 	return write(tconn->sock, data, len);
 }
 
+static int _tcpip_read(int fd, void *data, size_t len)
+{
+	int ret;
+	size_t remaining;
+	size_t offset;
+	size_t recvd;
+
+	if (0 == len) {
+		return 0;
+	}
+
+	for(remaining = len, offset = 0, recvd = 0; remaining; remaining -= recvd, offset += recvd, recvd = 0) {
+		ret = read(fd, &((uint8_t *)data)[offset], remaining);
+		if (-1 == ret) {
+			if (EAGAIN == errno) {
+				continue;
+			}
+			ret = -errno;
+			pr_err("%s(): read: %s\n", __func__, strerror(errno));
+			return ret;
+		}
+		recvd = ret;
+	}
+
+	return 0;
+}
+
 static int tcpip_read(struct connection *conn, void *data, size_t len)
 {
 	struct tcpip_connection *tconn = conn->priv;
 
-	return read(tconn->sock, data, len);
+	int ret;
+	uint8_t *p_data = data;
+	size_t msg_size;
+	size_t payload_size;
+
+	ret = _tcpip_read(tconn->sock, p_data, sizeof(struct gb_operation_msg_hdr));
+	if (ret) {
+		pr_err("Failed to get header\n");
+		return ret;
+	}
+
+	msg_size = gb_operation_msg_size(data);
+	payload_size = msg_size - sizeof(struct gb_operation_msg_hdr);
+	p_data += sizeof(struct gb_operation_msg_hdr);
+
+	ret = _tcpip_read(tconn->sock, p_data, payload_size);
+	if (ret < 0) {
+		pr_err("Failed to get payload\n");
+		return ret;
+	}
+
+	return msg_size;
 }
 
 static int tcpip_init(struct controller *ctrl)
