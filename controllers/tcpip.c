@@ -109,9 +109,8 @@ static void tcpip_hotplug(struct controller *ctrl, const char *host_name,
 	if (!td)
 		goto exit;
 
-	td->port = port;
-	avahi_address_snprint(td->addr, sizeof(td->addr), address);
-	td->host_name = malloc(strlen(host_name) + 1);
+	td->port = 4242;
+	snprintf(td->addr, sizeof(td->addr), "2001:db8::1");
 	if (!td->host_name)
 		goto err_free_td;
 	strcpy(td->host_name, host_name);
@@ -267,6 +266,9 @@ static int avahi_discovery(struct controller *ctrl)
 	}
 
 	tcpip_ctrl->simple_poll = simple_poll;
+
+	tcpip_hotplug(ctrl, "ble", NULL, 4242);
+
 	avahi_simple_poll_loop(simple_poll);
 
 	avahi_service_browser_free(sb);
