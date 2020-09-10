@@ -1,6 +1,6 @@
 bin_PROGRAMS = gbridge
 
-gbridge_CFLAGS = -Wall -Werror -I${GBDIR}
+gbridge_CFLAGS = -Wall -Werror
 gbridge_CFLAGS += `pkg-config --cflags libnl-3.0 libnl-genl-3.0`
 gbridge_CFLAGS += `pkg-config --cflags bluez`
 

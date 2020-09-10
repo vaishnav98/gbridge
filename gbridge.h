@@ -28,10 +28,10 @@
 #define __packed  __attribute__((__packed__))
 #define BIT(nr)                 (1UL << (nr))
 
-#include <greybus.h>
-#include <greybus_protocols.h>
-#include <greybus_manifest.h>
-#include <gb_netlink.h>
+#include "greybus.h"
+#include "greybus_protocols.h"
+#include "greybus_manifest.h"
+#include "gb_netlink.h"
 
 #define SVC_CPORT		0
 #define CONTROL_CPORT		0
