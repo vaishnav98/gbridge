@@ -79,13 +79,4 @@ AS_IF([test "$HIGHER_VERSION" = "4.9.0"], [
 	AC_MSG_ERROR(["A kernel >= 4.9 is required"])
 ])
 
-AC_ARG_VAR([GBDIR], ["greybus sources directory"])
-AC_ARG_VAR([KERNEL_DIR], ["kernel sources directory"])
-AS_IF([test "$KERNEL_DIR" = ""], [
-	KERNEL_DIR="/lib/modules/$KERNEL_VERSION/build"
-	AS_IF([test "$GBDIR" = ""], [
-		GBDIR="$KERNEL_DIR/drivers/staging/greybus"
-	])
-])
-
 AC_OUTPUT
