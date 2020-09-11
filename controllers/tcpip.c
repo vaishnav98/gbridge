@@ -281,7 +281,6 @@ static int avahi_discovery(struct controller *ctrl)
 	tcpip_hotplug(ctrl, "ble", NULL, 4242);
 #endif
 
-
 	avahi_simple_poll_loop(simple_poll);
 
 	avahi_service_browser_free(sb);
