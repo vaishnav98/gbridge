@@ -93,7 +93,10 @@ static int tcpip_connection_destroy(struct connection *conn)
 	struct tcpip_connection *tconn = conn->priv;
 
 	conn->priv = NULL;
-	close(tconn->sock);
+	pr_info("closing socket %d\n", tconn->sock);
+	if (shutdown(tconn->sock, SHUT_RDWR)) {
+		pr_err("failed to close socket %d\n", tconn->sock);
+	}
 	free(tconn);
 
 	return 0;
