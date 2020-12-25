@@ -1,6 +1,7 @@
 /*
  * GBridge (Greybus Bridge)
  * Copyright (c) 2016 Alexandre Bailon
+ * Copyright (c) 2019-2020 Friedt Professional Engineering Services, Inc
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,6 +44,7 @@ struct tcpip_connection {
 struct tcpip_device {
 	char *host_name;
 	char addr[AVAHI_ADDRESS_STR_MAX];
+	int family;
 	int port;
 };
 
@@ -54,7 +56,10 @@ struct tcpip_controller {
 static int tcpip_connection_create(struct connection *conn)
 {
 	int ret;
-	struct sockaddr_in6 serv_addr;
+	struct sockaddr_in6 addr;
+	struct sockaddr_in6 *const sa6 = &addr;
+	struct sockaddr_in *const sa = (struct sockaddr_in *)&addr;
+	socklen_t addrlen;
 	struct tcpip_connection *tconn;
 	struct tcpip_device *td = conn->intf2->priv;
 
@@ -62,26 +67,37 @@ static int tcpip_connection_create(struct connection *conn)
 	if (!tconn)
 		return -ENOMEM;
 
-	tconn->sock = socket(AF_INET6, SOCK_STREAM, 0);
+	tconn->sock = socket(td->family, SOCK_STREAM, 0);
 	if (tconn->sock < 0) {
 		pr_err("Can't create socket\n");
 		return tconn->sock;
 	}
 	conn->priv = tconn;
 
-	memset(&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin6_family = AF_INET6;
-	serv_addr.sin6_port = htons(td->port + conn->cport2_id);
-	inet_pton(AF_INET6, td->addr, &serv_addr.sin6_addr);
+	memset(&addr, 0, sizeof(addr));
+	switch(td->family) {
+	case AF_INET:
+		sa->sin_family = AF_INET;
+		sa->sin_port = htons(td->port + conn->cport2_id);
+		inet_pton(AF_INET, td->addr, &sa->sin_addr);
+		addrlen = sizeof(*sa);
+		break;
+	case AF_INET6:
+		sa6->sin6_family = AF_INET6;
+		sa6->sin6_port = htons(td->port + conn->cport2_id);
+		inet_pton(AF_INET6, td->addr, &sa6->sin6_addr);
+		addrlen = sizeof(*sa6);
+		break;
+	default:
+		return -EINVAL;
+	}
 
 	pr_info("Trying to connect to module at %s:%d\n", td->addr, td->port);
-	do {
-		ret = connect(tconn->sock,
-			      (struct sockaddr *)&serv_addr,
-			      sizeof(serv_addr));
-		if (ret)
-			sleep(1);
-	} while (ret);
+	ret = connect(tconn->sock, (struct sockaddr *)&addr, addrlen);
+	if (ret == -1) {
+		pr_err("Failed to connect (%d)\n", errno);
+		return -errno;
+	}
 
 	pr_info("Connected to module\n");
 
@@ -117,7 +133,19 @@ static void tcpip_hotplug(struct controller *ctrl, const char *host_name,
 	td->host_name = malloc(strlen(host_name) + 1);
 	if (!td->host_name)
 		goto err_free_td;
+
 	strcpy(td->host_name, host_name);
+
+	switch(address->proto) {
+	case AVAHI_PROTO_INET:
+		td->family = AF_INET;
+		break;
+	case AVAHI_PROTO_INET6:
+		td->family = AF_INET6;
+		break;
+	default:
+		goto err_free_host_name;
+	}
 
 	/* FIXME: use real IDs */
 	intf = interface_create(ctrl, 1, 1, 0x1234, td);
@@ -259,7 +287,7 @@ static int avahi_discovery(struct controller *ctrl)
 
 	tcpip_ctrl->client = client;
 	sb = avahi_service_browser_new(client,
-				       AVAHI_IF_UNSPEC, AVAHI_PROTO_INET,
+				       AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,
 				       "_greybus._tcp", NULL, 0,
 				       browse_callback, ctrl); 
 	if (!sb) {
@@ -284,7 +312,6 @@ err_simple_pool_free:
 static void avahi_discovery_stop(struct controller *ctrl)
 {
 	struct tcpip_controller *tcpip_ctrl = ctrl->priv;
-
 	avahi_simple_poll_quit(tcpip_ctrl->simple_poll);
 }
 
