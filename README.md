@@ -6,6 +6,10 @@ It was supposed to be used by modular phones to control modules.
 GBridge is an application that can be used to support other bus / network,
 such as TCP/IP or bluetooth. 
 
+## Build Status
+
+![CI](https://github.com/cfriedt/gbridge/workflows/CI/badge.svg)
+
 ## SVC
 The SVC take a central piece in Greybus.
 It is in charge of module hot plug / hot unplug detection,

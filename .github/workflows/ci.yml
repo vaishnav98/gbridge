@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      WS: ${{ github.workspace }}
+      GBDIR: ${{ github.workspace }}/gb-netlink
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        path: gbridge
+
+    - name: Clone gb-netlink
+      run: |
+        cd ${WS}
+        git clone https://github.com/cfriedt/gb-netlink
+        git -C ${GBDIR} checkout gb_netlink
+
+    - name: Install Build Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt install -y build-essential cmake git libnl-genl-3-dev autoconf automake libtool pkg-config libavahi-common-dev libavahi-client-dev
+
+    - name: Build
+      run: |
+        cd ${WS}/gbridge
+        autoreconf -vfi
+        ./configure --disable-bluetooth --enable-tcpip --enable-uart --enable-netlink --disable-gbsim
+        make -j`nproc --all`
