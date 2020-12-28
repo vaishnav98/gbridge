@@ -25,6 +25,7 @@
 
 #include "gbridge.h"
 #include "controllers/uart.h"
+#include "controllers/tls.h"
 
 int run;
 
@@ -36,6 +37,12 @@ static void help(void)
 		"uart options:\n"
 		"\t-p uart_device: set the uart device\n"
 		"\t-b baudrate: set the uart baudrate\n"
+#endif
+#ifdef HAVE_TLS
+		"tls options:\n"
+		"\t-a ca_cert: set the CA certificate\n"
+		"\t-c client_cert: set the client certificate\n"
+		"\t-k client_key: set the client key\n"
 #endif
 		);
 }
@@ -53,13 +60,19 @@ int main(int argc, char *argv[])
 	int baudrate = 115200;
 	const char *uart = NULL;
 
+#ifdef HAVE_TLS
+	const char *ca_cert = NULL;
+	const char *client_cert = NULL;
+	const char *client_key = NULL;
+#endif
+
 	signal(SIGINT, signal_handler);
 	signal(SIGHUP, signal_handler);
 	signal(SIGTERM, signal_handler);
 
 	register_controllers();
 
-	while ((c = getopt(argc, argv, "p:b:m:")) != -1) {
+	while ((c = getopt(argc, argv, "p:b:m:a:c:k:")) != -1) {
 		switch(c) {
 		case 'p':
 			uart = optarg;
@@ -80,6 +93,20 @@ int main(int argc, char *argv[])
 			pr_err("You must build gbridge with gbsim enabled\n");
 			return -EINVAL;
 #endif
+#ifdef HAVE_TLS
+		case 'a':
+			ca_cert = optarg;
+			break;
+		case 'c':
+			client_cert = optarg;
+			break;
+		case 'k':
+			client_key = optarg;
+			break;
+#else
+			pr_err("You must build gbridge with tls enabled\n");
+			return -EINVAL;
+#endif
 		default:
 			help();
 			return -EINVAL;
@@ -97,6 +124,14 @@ int main(int argc, char *argv[])
 		if (ret)
 			return ret;
 	}
+
+#ifdef HAVE_TLS
+	ret = gbridge_tls_init(ca_cert, client_cert, client_key);
+	if (ret) {
+		pr_err("gbridge_tls_init() failed (%d)\n", ret);
+		return ret;
+	}
+#endif
 
 	run = 1;
 	controllers_init();

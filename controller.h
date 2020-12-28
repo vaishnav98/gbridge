@@ -81,6 +81,7 @@ struct controller {
 
 extern struct controller bluetooth_controller;
 extern struct controller tcpip_controller;
+extern struct controller tls_controller;
 extern struct controller netlink_controller;
 
 void cport_pack(struct gb_operation_msg_hdr *header, uint16_t cport_id);

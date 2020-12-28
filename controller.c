@@ -408,6 +408,9 @@ void register_controllers(void)
 #ifdef HAVE_TCPIP
 	register_controller(&tcpip_controller);
 #endif
+#ifdef HAVE_TLS
+	register_controller(&tls_controller);
+#endif
 }
 
 static void *controller_loop(void *data)

@@ -34,5 +34,5 @@ jobs:
       run: |
         cd ${WS}/gbridge
         autoreconf -vfi
-        ./configure --disable-bluetooth --enable-tcpip --enable-uart --enable-netlink --disable-gbsim
+        ./configure --disable-bluetooth --enable-tcpip --enable-tls --enable-uart --enable-netlink --disable-gbsim
         make -j`nproc --all`

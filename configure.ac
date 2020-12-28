@@ -16,6 +16,8 @@ AC_CHECK_LIB([nl-genl-3], [genl_register_family])
 AC_CHECK_LIB([pthread], [pthread_create])
 AC_CHECK_LIB([avahi-common], [main])
 AC_CHECK_LIB([avahi-client], [main])
+AC_CHECK_LIB([ssl], [OPENSSL_init_ssl])
+AC_CHECK_LIB([crypto], [BIO_read])
 
 AC_CONFIG_SRCDIR([main.c])
 AC_CONFIG_HEADERS([config.h])
@@ -42,6 +44,16 @@ AC_ARG_ENABLE([tcpip],
 	*) AC_MSG_ERROR([bad value ${enableval} for --enable-tcpip]) ;;
 esac])
 AM_CONDITIONAL([TPCIP], [test x$tcpip = xtrue])
+
+AC_ARG_ENABLE([tls],
+[  --enable-tls    Enable TLS],
+[case "${enableval}" in
+	yes) tls=true ;
+	     AC_DEFINE([HAVE_TLS], [1], ["TLS support"]) ;;
+	no)  tls=false ;;
+	*) AC_MSG_ERROR([bad value ${enableval} for --enable-tls]) ;;
+esac])
+AM_CONDITIONAL([TLS], [test x$tls = xtrue])
 
 AC_ARG_ENABLE([uart],
 [  --enable-uart    Enable uart],

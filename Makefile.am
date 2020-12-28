@@ -1,8 +1,7 @@
 bin_PROGRAMS = gbridge
 
 gbridge_CFLAGS = -Wall -Werror -I${GBDIR}
-gbridge_CFLAGS += `pkg-config --cflags libnl-3.0 libnl-genl-3.0`
-gbridge_CFLAGS += `pkg-config --cflags bluez`
+gbridge_LDLIBS =
 
 gbridge_SOURCES = main.c \
 		  debug.c \
@@ -12,14 +11,24 @@ gbridge_SOURCES = main.c \
 
 if NETLINK
 gbridge_SOURCES += controllers/gb_netlink.c
+gbridge_CFLAGS += `pkg-config --cflags libnl-3.0 libnl-genl-3.0`
 endif
 
 if TPCIP
 gbridge_SOURCES += controllers/tcpip.c
+gbridge_CFLAGS += `pkg-config --cflags avahi-client`
+gbridge_LDLIBS += `pkg-config --libs avahi-client`
+endif
+
+if TLS
+gbridge_SOURCES += controllers/tls.c
+gbridge_CFLAGS += `pkg-config --cflags openssl`
+gbridge_LDLIBS += `pkg-config --libs openssl`
 endif
 
 if BLUETOOTH
 gbridge_SOURCES += controllers/bluetooth.c
+gbridge_CFLAGS += `pkg-config --cflags bluez`
 endif
 
 if UART
