@@ -111,6 +111,7 @@ int register_uart_controller(const char *file_name, int baudrate)
 		free(uart_ctrl);
 	}
 
+	tcflush(uart_ctrl->fd, TCIFLUSH);
 	ctrl = malloc(sizeof(*ctrl));
 	if (!ctrl) {
 		close(uart_ctrl->fd);
